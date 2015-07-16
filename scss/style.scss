@@ -95,3 +95,20 @@ img {
 /**
  * YOUR CODE HERE
  */
+
+.grid {
+    height: 100vh;
+}
+textarea {
+    padding: 1.5rem;
+    border: none;
+    line-height: 1.5rem;
+    &:first-child {
+        background-color: #efefef;
+    }
+    &:focus {
+        highlight: none;
+        outline: 1px solid lightblue;
+
+    }
+}
