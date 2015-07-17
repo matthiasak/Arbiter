@@ -4,7 +4,7 @@ import {Promise} from 'es6-promise'
 var Babel = require('babel-core')
 import React, {Component} from 'react'
 
-var program = `/* (1) use log(..) to print output (both sync and async) to the right hand side.
+var program = unescape(window.location.hash.slice(1)) || `/* (1) use log(..) to print output (both sync and async) to the right hand side.
  * (2) Warning: infinite loops will possibly freeze this tab, so take caution. */
 
 log(5000)
@@ -124,9 +124,7 @@ const channels = {
 const blobContents = (code) => `
     (function(log){
         ${code}
-    })(
-        function(x){ postMessage(x) }
-    )
+    }).call(this, function(x){ postMessage(x) })
     `,
     getWorker = (code) => {
         let contents = blobContents(code),
@@ -166,6 +164,7 @@ const analyze = (program) => {
         console.error(e)
     }
     oldProgram = program.trim()
+    window.location.hash = `#${escape(oldProgram)}`
     channels.codeCleared.send()
 }
 
