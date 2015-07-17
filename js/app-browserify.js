@@ -99,7 +99,8 @@ const chan = () => {
 
 const channels = {
     codeEdited: chan(),
-    logEmitted: chan()
+    logEmitted: chan(),
+    codeCleared: chan()
 }
 
 /**
@@ -121,6 +122,7 @@ let blob = new Blob([
 
 // worker.onerror = (e) => console.error(e)
 worker.onmessage = (e) => {
+    channels.codeCleared.send()
     channels.logEmitted.send(e.data)
 }
 
@@ -130,7 +132,7 @@ channels.codeEdited.to((code) => {
 
 const analyze = (program) => {
     try{
-        const result = Babel.transform(program),
+        const result = Babel.transform(program, {stage: 1}),
             {code} = result
 
         worker.postMessage(code)
@@ -196,11 +198,11 @@ class Results extends Component {
         }
     }
     componentDidMount(){
-        channels.codeEdited.to(this.rerender)
+        channels.codeCleared.to(this.rerender)
         channels.logEmitted.to(this.append)
     }
     componentDidUnmount(){
-        channel.codeEdited.unto(this.rerender)
+        channel.codeCleared.unto(this.rerender)
         channels.logEmitted.unto(this.append)
     }
     render(){
