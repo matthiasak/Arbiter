@@ -4,7 +4,10 @@ import {Promise} from 'es6-promise'
 var Babel = require('babel-core')
 import React, {Component} from 'react'
 
-var program = `log(5000)
+var program = `/* (1) use log(..) to print output (both sync and async) to the right hand side.
+ * (2) Warning: infinite loops will possibly freeze this tab, so take caution. */
+
+log(5000)
 let each = (c, fn) => c.forEach(fn)
 each([{a:1},2,3], log)
 `
@@ -152,7 +155,9 @@ channels.codeEdited.to((code) => {
     analyze(code)
 })
 
+let oldProgram = null
 const analyze = (program) => {
+    if(oldProgram === program.trim()) return
     try{
         const result = Babel.transform(program, {stage: 1}),
             {code} = result
@@ -160,7 +165,7 @@ const analyze = (program) => {
     } catch(e){
         console.error(e)
     }
-
+    oldProgram = program.trim()
     channels.codeCleared.send()
 }
 
