@@ -122,7 +122,6 @@ let blob = new Blob([
 
 // worker.onerror = (e) => console.error(e)
 worker.onmessage = (e) => {
-    channels.codeCleared.send()
     channels.logEmitted.send(e.data)
 }
 
@@ -139,6 +138,7 @@ const analyze = (program) => {
     } catch(e){
         console.error(e)
     }
+    channels.codeCleared.send()
 }
 
 function autobind(target){
