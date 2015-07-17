@@ -42,6 +42,7 @@ const find = (c, pred) => {
 }
 const concatAll = (cc) => [].concat(...cc)
 const ignores = (c, ignore) => filter(c, (x) => ignore.indexOf(x) === -1)
+const count = (a) => a.length
 
 /**
  * @example
@@ -62,10 +63,15 @@ const ignores = (c, ignore) => filter(c, (x) => ignore.indexOf(x) === -1)
  */
 
 
-const prop = (val) => {
+const prop = (val, onSet) => {
+    if(val && onSet){
+        onSet(val)
+    }
     return function(x){
-        (typeof x !== 'undefined') && (val = x)
-        return val
+        if(typeof x !== 'undefined') {
+            onSet(x, val)
+            return (val = x)
+        }
     }
 }
 
@@ -79,7 +85,10 @@ const gen = function* ( cb = ()=>{} ){
 const chan = () => {
     let dests = new Set(),
         g1 = gen((args) => { for(var x of dests) x(...args) }),
-        pipe = (...args) => g1.next(args)
+        stack = [],
+        pipe = (...args) => {
+            requestAnimationFrame(() => {g1.next(args)})
+        }
 
     g1.next()
 
@@ -109,21 +118,35 @@ const channels = {
  * @return {Array of <Tokens>}
  */
 
-let blob = new Blob([
-    `
-        this.onmessage = function(e){
-            var f = new Function("(function(log){"+e.data+"})(function(x){postMessage(x)});")
-            f()
-        }
-    `
-    ]),
-    blobURL = window.URL.createObjectURL(blob),
-    worker = new Worker(blobURL)
+const blobContents = (code) => `
+    (function(log){
+        ${code}
+    })(
+        function(x){ postMessage(x) }
+    )
+    `,
+    getWorker = (code) => {
+        let contents = blobContents(code),
+            blob = new Blob([contents]),
+            url = window.URL.createObjectURL(blob),
+            w = new Worker(url)
 
-// worker.onerror = (e) => console.error(e)
-worker.onmessage = (e) => {
-    channels.logEmitted.send(e.data)
-}
+        return w
+    },
+    // worker is a prop() with an "onSet"
+    worker = prop(getWorker(), (worker_new, worker_old) => {
+        // whenever we set a new worker,
+        // set onmessage on the new worker,
+        // and kill the old one
+        worker_new.onmessage = (e) => {
+            channels.logEmitted.send(e.data)
+        }
+
+        worker_old && worker_old.terminate()
+    })
+
+// shortcut to restarting worker
+worker.new = (code) => worker(getWorker(code))
 
 channels.codeEdited.to((code) => {
     analyze(code)
@@ -133,11 +156,11 @@ const analyze = (program) => {
     try{
         const result = Babel.transform(program, {stage: 1}),
             {code} = result
-
-        worker.postMessage(code)
+        worker.new(code)
     } catch(e){
         console.error(e)
     }
+
     channels.codeCleared.send()
 }
 
