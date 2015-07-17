@@ -124,7 +124,11 @@ const channels = {
 const blobContents = (code) => `
     (function(log){
         ${code}
-    }).call(this, function(x){ postMessage(x) })
+    }).call(this, function(){
+        Array.prototype.slice.call(arguments).forEach(function(x){
+            postMessage(x)
+        })
+    })
     `,
     getWorker = (code) => {
         let contents = blobContents(code),
