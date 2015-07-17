@@ -4,26 +4,19 @@ import {Promise} from 'es6-promise'
 var Babel = require('babel-core')
 import React, {Component} from 'react'
 
-var program = `
-let prop = (v) => (x) => {
-    (typeof x !== 'undefined') && (v = x)
-    return x
-}
-function sum1(a,b){
-    return a+b
-}
-let sum2 = (a,b) => a+b
-let test = 'helloooooooooooooooooo'
+var program = `log(5000)
+let each = (c, fn) => c.forEach(fn)
+each([{a:1},2,3], log)
 `
 
 const qs = (sel, el) => (el || document).querySelector(sel)
-const clone = (data) => typeof data === 'undefined' ? data : JSON.parse(JSON.stringify(data))
 
 /**
  * TRANSDUCER stuff
  */
 
 // resources
+const clone = (data) => typeof data === 'undefined' ? data : JSON.parse(JSON.stringify(data))
 const concat = (arr, x) => arr.concat([x])
 const compose = (f, g) => (x) => f(g(x))
 const each = (c, cb) => c.forEach(cb)
@@ -68,6 +61,7 @@ const ignores = (c, ignore) => filter(c, (x) => ignore.indexOf(x) === -1)
  *
  */
 
+
 const prop = (val) => {
     return function(x){
         (typeof x !== 'undefined') && (val = x)
@@ -84,13 +78,13 @@ const gen = function* ( cb = ()=>{} ){
 
 const chan = () => {
     let dests = new Set(),
-        g1 = gen((args) => { for(var x of dests) x(...args) })
+        g1 = gen((args) => { for(var x of dests) x(...args) }),
+        pipe = (...args) => g1.next(args)
 
     g1.next()
 
     return {
         from: function(cb) {
-            let pipe = (...args) => g1.next(args)
             cb(pipe)
         },
         to: function(cb) {
@@ -98,148 +92,55 @@ const chan = () => {
         },
         unto: function(cb){
             dests.remove(cb)
-        }
+        },
+        send: (...args) => pipe(...args)
     }
 }
 
-const channel = chan()
-const NAMES = (x) => x.type && !!(x.type.label || '').match(/^(name)$/)
-const EOF = (x) => x.type && !!(x.type.label || '').match(/^eof$/)
-const SEMICOLON = (x) => x.type && !!(x.type.label || '').match(/^;$/)
-const KEYWORD = (i) => (x) => x.type && (x.type.keyword || '').match(i)
-const LABEL = (i) => (x) => x.type && (x.type.label || '').match(i)
-const findKeyword = (c, i) => find(c, KEYWORD(i))
-const findLabel = (c, i) => find(c, LABEL(i))
-const isCurlyLeft = LABEL(/\{/)
-const isCurlyRight = LABEL(/\}/)
-const flatten = (c) => map(c, (token) => token.value || token.type && token.type.label).join(' ')
-const logEach = (c) => each(c, (x) => console.log(x))
+const channels = {
+    codeEdited: chan(),
+    logEmitted: chan()
+}
+
 /**
  * Returns a slice of the input collection that represents a single function scope
  * @param  {Array of <Tokens>} c
  * @return {Array of <Tokens>}
  */
 
-const extractScope = (c) => {
-    let functionToken = findKeyword(c, 'function')
-    if(!functionToken) return null // no scopes found
-
-    let afterFunctionToken = c.slice(c.indexOf(functionToken)),
-        curlies = filter(afterFunctionToken, LABEL(/[\{\}]/)), // look for all curlies
-        depth = 0,
-        scopeEnd = null
-
-    each(curlies, (v, i) => {
-        if(isCurlyLeft(v)) {
-            depth++
-        } else {
-            depth --
+let blob = new Blob([
+    `
+        this.onmessage = function(e){
+            var f = new Function("(function(log){"+e.data+"})(function(x){postMessage(x)});")
+            f()
         }
-        if(depth === 0 && !scopeEnd){
-            scopeEnd = v
-        }
-    })
+    `
+    ]),
+    blobURL = window.URL.createObjectURL(blob),
+    worker = new Worker(blobURL)
 
-    return afterFunctionToken.slice(0, afterFunctionToken.indexOf(scopeEnd)+1)
+// worker.onerror = (e) => console.error(e)
+worker.onmessage = (e) => {
+    channels.logEmitted.send(e.data)
 }
 
-const extractScopes = (c) => {
-    var nextScope,
-        scopes = []
-    do{
-        nextScope = extractScope(c)
-        if(nextScope){
-            scopes.push(nextScope)
-            c = [].concat( c.slice(0, c.indexOf(head(nextScope))), c.slice(c.indexOf(last(nextScope))) )
-        }
-    }
-    while(nextScope)
+channels.codeEdited.to((code) => {
+    analyze(code)
+})
 
-    return scopes
-}
-
-const extractVarAssignment = (c) => {
-    let varToken = findLabel(c, 'var')
-    if(!varToken) return null // no vars found
-
-    let varList = c.slice(c.indexOf(varToken)),
-        varNames = until(varList, SEMICOLON), // var x[ = ...], y[, ...]] ;
-        tokens = []
-
-    for(var i = 0, len = varNames.length; i < len; i++){
-        let token = varNames[i]
-        if(token.value === '='){
-            console.log(varNames[i+1], i, varNames)
-            varNames[i+1].value = `prop(${varNames[i+1].value})`
-            tokens.push(varNames[i+1])
-        }
-    }
-
-    return tokens
-}
-
-const extractVarAssignments = (c) => {
-    var nextVar,
-        vars = []
-
-    do{
-        nextVar = extractVarAssignment(c) // var x[, y[, ...]] ;
-        if(nextVar){
-            vars.push(nextVar)
-            // create a new array, removing what we just pushed to vars
-            c = c.slice(c.indexOf(last(nextVar)) + 1)
-        }
-    }
-    while(nextVar)
-
-    return vars
-}
-
-const buildTree = (c) => {
-    let scopes = extractScopes(c),
-        subtree = {
-            assignments: extractVarAssignments(ignores(c, concatAll(scopes) )),
-            scopes: map(scopes, compose(buildTree, rest)),
-            names: []
-        }
-    return subtree
-}
 const analyze = (program) => {
     try{
         const result = Babel.transform(program),
-            {code} = result,
-            es5 = Babel.transform(code),
-            {ast} = es5,
-            p = new Array(ast.program.loc.end.line).fill([]),
-            tokens = ast.tokens
+            {code} = result
 
-        // logEach(tokens)
-
-        // -- 1
-        // anytime a variable is declared (arguments, regular scope) we must
-        // wrap it with prop(); args will be turned into props in function body (any function body, must consider scope)
-        // let names = filter(tokens, NAMES)
-        // let scopes = buildTree(until(tokens, EOF))
-        // console.log(scopes)
-        // -- 2
-        // anytime a variable is then used, we must add () after it
-
-        let arr = []
-        let codeResult = `(function(log){
-            ${code}
-        })(
-            function(x){ arr.push(x) }
-        )`
-        eval(codeResult)
-        return arr.join('\n')
-
+        worker.postMessage(code)
     } catch(e){
         console.error(e)
     }
 }
 
 function autobind(target){
-    target.prototype.bind = function(name){ this[name] = this[name].bind(this) }
+    target.prototype.bind = function(...names){ each(names, (n) => this[n] = this[n].bind(this) ) }
 }
 
 class TwoPainz extends Component {
@@ -258,38 +159,53 @@ class TwoPainz extends Component {
 class Code extends Component {
     constructor(...p){
         super(...p)
-        channel.from((_) => {
-            this.from = _
-        })
-        this.bind('_onKeyUp')
+        this.bind('_onKey', '_handleFormatting')
     }
-    _onKeyUp(e){
-        this.from( React.findDOMNode(this.refs.t).value )
+    _handleFormatting(e){
+        let {keyCode} = e,
+            node = React.findDOMNode(this.refs.t)
+
+        if(keyCode === 9){
+            e.preventDefault()
+            let s = node.selectionStart-1
+            node.value = node.value.slice(0,s+1) + '    ' + node.value.slice(s+1)
+            node.selectionStart = node.selectionEnd = s+5
+        }
+    }
+    _onKey(e){
+        let node = React.findDOMNode(this.refs.t)
+        channels.codeEdited.send( node.value )
     }
     componentDidMount(){
-        requestAnimationFrame(this._onKeyUp)
+        requestAnimationFrame(() => this._onKey())
     }
     render(){
-        return (<textarea ref="t" onChange={this._onKeyUp}>{program}</textarea>)
+        return (<textarea ref="t" onKeyUp={this._onKey} onKeyDown={this._handleFormatting}>{program}</textarea>)
     }
 }
 
 class Results extends Component {
     constructor(...p){
         super(...p)
-        this.state = { program: '' }
-        this.rerender = (program) => {
-            this.setState({ program: analyze(program) })
+        this.state = { logs: [] }
+        this.append = (m) => {
+            this.setState({ logs: concat(this.state.logs, m) })
+        }
+        this.rerender = () => {
+            this.setState({ logs: [] })
         }
     }
     componentDidMount(){
-        channel.to(this.rerender)
+        channels.codeEdited.to(this.rerender)
+        channels.logEmitted.to(this.append)
     }
     componentDidUnmount(){
-        channel.unto(this.rerender)
+        channel.codeEdited.unto(this.rerender)
+        channels.logEmitted.unto(this.append)
     }
     render(){
-        return (<textarea value={this.state.program} />)
+        let logs = map(this.state.logs, (a) => JSON.stringify(a)).join('\n')
+        return (<textarea value={ logs } />)
     }
 }
 
