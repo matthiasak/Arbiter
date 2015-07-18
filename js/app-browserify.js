@@ -3,6 +3,7 @@ require("babel/polyfill")
 import {Promise} from 'es6-promise'
 var Babel = require('babel-core')
 import React, {Component} from 'react'
+var highlight = require('highlighter')();
 
 var program = unescape(window.location.hash.slice(1)) || `/* (1) use log(..) to print output (both sync and async) to the right hand side.
  * (2) Warning: infinite loops will possibly freeze this tab, so take caution. */
@@ -200,20 +201,23 @@ class Code extends Component {
 
         if(keyCode === 9){
             e.preventDefault()
-            let s = node.selectionStart-1
-            node.value = node.value.slice(0,s+1) + '    ' + node.value.slice(s+1)
-            node.selectionStart = node.selectionEnd = s+5
+            let s = window.getSelection(),
+                x = s.focusNode.textContent,
+                o = s.focusOffset
+            s.focusNode.textContent = x.slice(0,o) + '    ' + x.slice(o)
+            s.extend(s.focusNode, Math.min(o+4, x.length))
+            s.collapseToEnd()
         }
     }
     _onKey(e){
         let node = React.findDOMNode(this.refs.t)
-        channels.codeEdited.send( node.value )
+        channels.codeEdited.send( node.innerText )
     }
     componentDidMount(){
         requestAnimationFrame(() => this._onKey())
     }
     render(){
-        return (<textarea ref="t" onKeyUp={this._onKey} onKeyDown={this._handleFormatting}>{program}</textarea>)
+        return (<code contentEditable='true' ref="t" onKeyUp={this._onKey} onKeyDown={this._handleFormatting} dangerouslySetInnerHTML={{__html: highlight(program, 'javascript') }}></code>)
     }
 }
 

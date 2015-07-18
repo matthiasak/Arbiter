@@ -113,31 +113,121 @@ img {
  * YOUR CODE HERE
  */
 
-.grid {
-    height: 100vh;
-}
-
 $gray: rgb(28, 38, 43);
 $green: rgb(109, 194, 173);
 
-textarea {
-    padding: 1.5rem;
-    border: none;
-    line-height: 1.5rem;
-    font-family: 'Ubuntu Mono', sans-serif;
-    font-size: .75em;
-    line-height: 2.5em;
-    vertical-align: center;
-    &:first-child {
-        background-color: #efefef;
-    }
-    &:nth-child(2){
-        background-color: $gray;
-        color:$green;
-    }
-    &:focus {
-        highlight: none;
-        outline: 1px solid lightblue;
+.grid {
+    height: 100vh;
+    > * {
+        padding: 1.5rem;
+        border: none;
+        font-family: 'Ubuntu Mono', sans-serif;
+        font-size: .75em;
+        vertical-align: center;
+        overflow-y: auto;
+        &:first-child {
+            background-color: #efefef;
+        }
+        &:nth-child(2){
+            background-color: $gray;
+            color:$green;
+        }
+        &:focus {
+            highlight: none;
+            outline: 1px solid lightblue;
 
+        }
     }
+
+}
+
+/* Atelier-Forest Comment */
+.hljs-comment {
+  color: #766e6b;
+}
+
+/* Atelier-Forest Red */
+.hljs-variable,
+.hljs-attribute,
+.hljs-tag,
+.hljs-regexp,
+.hljs-name,
+.ruby .hljs-constant,
+.xml .hljs-tag .hljs-title,
+.xml .hljs-pi,
+.xml .hljs-doctype,
+.html .hljs-doctype,
+.css .hljs-id,
+.css .hljs-class,
+.css .hljs-pseudo {
+  color: #f22c40;
+}
+
+/* Atelier-Forest Orange */
+.hljs-number,
+.hljs-preprocessor,
+.hljs-built_in,
+.hljs-literal,
+.hljs-params,
+.hljs-constant {
+  color: #df5320;
+}
+
+/* Atelier-Forest Yellow */
+.ruby .hljs-class .hljs-title,
+.css .hljs-rule .hljs-attribute {
+  color: #c38418;
+}
+
+/* Atelier-Forest Green */
+.hljs-string,
+.hljs-value,
+.hljs-inheritance,
+.hljs-header,
+.ruby .hljs-symbol,
+.xml .hljs-cdata {
+  color: #7b9726;
+}
+
+/* Atelier-Forest Aqua */
+.hljs-title,
+.css .hljs-hexcolor {
+  color: #3d97b8;
+}
+
+/* Atelier-Forest Blue */
+.hljs-function,
+.python .hljs-decorator,
+.python .hljs-title,
+.ruby .hljs-function .hljs-title,
+.ruby .hljs-title .hljs-keyword,
+.perl .hljs-sub,
+.javascript .hljs-title,
+.coffeescript .hljs-title {
+  color: #407ee7;
+}
+
+/* Atelier-Forest Purple */
+.hljs-keyword,
+.javascript .hljs-function {
+  color: #6666ea;
+}
+
+.hljs {
+  display: block;
+  overflow-x: auto;
+  background: #f1efee;
+  color: #68615e;
+  padding: 0.5em;
+  -webkit-text-size-adjust: none;
+}
+
+.coffeescript .javascript,
+.javascript .xml,
+.tex .hljs-formula,
+.xml .javascript,
+.xml .vbscript,
+.xml .css,
+.xml .hljs-cdata {
+  opacity: 0.5;
 }
