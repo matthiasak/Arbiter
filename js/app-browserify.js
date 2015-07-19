@@ -3,10 +3,12 @@ require("babel/polyfill")
 import {Promise} from 'es6-promise'
 var Babel = require('babel-core')
 import React, {Component} from 'react'
-var highlight = require('highlighter')();
+let codemirror = require('./codemirror')
+let jsmode = require('./javascript')
 
 var program = unescape(window.location.hash.slice(1)) || `/* (1) use log(..) to print output (both sync and async) to the right hand side.
- * (2) Warning: infinite loops will possibly freeze this tab, so take caution. */
+ * (2) use reset(..) from your own code to reset the output area.
+ * (3) Warning: infinite loops will possibly freeze this tab, so take caution. */
 
 log(5000)
 let each = (c, fn) => c.forEach(fn)
@@ -122,21 +124,11 @@ const channels = {
  * @return {Array of <Tokens>}
  */
 
-const blobContents = (code) => `
-    (function(log){
-        ${code}
-    }).call(this, function(){
-        Array.prototype.slice.call(arguments).forEach(function(x){
-            postMessage(x)
+const getWorker = (code) => {
+        let w = new Worker('./dist/worker.js')
+        requestAnimationFrame(() => {
+            w.postMessage(code)
         })
-    })
-    `,
-    getWorker = (code) => {
-        let contents = blobContents(code),
-            blob = new Blob([contents]),
-            url = window.URL.createObjectURL(blob),
-            w = new Worker(url)
-
         return w
     },
     // worker is a prop() with an "onSet"
@@ -145,10 +137,22 @@ const blobContents = (code) => `
         // set onmessage on the new worker,
         // and kill the old one
         worker_new.onmessage = (e) => {
-            channels.logEmitted.send(e.data)
+            switch(e.data.type){
+                case 'reset':
+                    channels.codeCleared.send()
+                    break;
+                case 'log':
+                    channels.logEmitted.send(e.data.data)
+                    break;
+            }
+
         }
 
-        worker_old && worker_old.terminate()
+        requestAnimationFrame(() => {
+            if(!worker_old) return
+            worker.onmessage = null
+            worker_old.terminate()
+        })
     })
 
 // shortcut to restarting worker
@@ -189,35 +193,37 @@ class TwoPainz extends Component {
     }
 }
 
+const longest_common_substring_from_start = (a, b) => {
+    let shorter = a.length > b.length ? a : b,
+        longer = a.length <= b.length ? a : b
+    for(let i=0, len = shorter.length; i<len; i++){
+        if(shorter[i] !== longer[i]) return shorter.slice(0, i+1)
+    }
+    return shorter
+}
+
 @autobind
 class Code extends Component {
     constructor(...p){
         super(...p)
-        this.bind('_onKey', '_handleFormatting')
-    }
-    _handleFormatting(e){
-        let {keyCode} = e,
-            node = React.findDOMNode(this.refs.t)
-
-        if(keyCode === 9){
-            e.preventDefault()
-            let s = window.getSelection(),
-                x = s.focusNode.textContent,
-                o = s.focusOffset
-            s.focusNode.textContent = x.slice(0,o) + '    ' + x.slice(o)
-            s.extend(s.focusNode, Math.min(o+4, x.length))
-            s.collapseToEnd()
-        }
-    }
-    _onKey(e){
-        let node = React.findDOMNode(this.refs.t)
-        channels.codeEdited.send( node.innerText )
+        // channels.codeEdited.send( React.findDOMNode(this).innerText )
     }
     componentDidMount(){
-        requestAnimationFrame(() => this._onKey())
+        this.editor = codemirror.fromTextArea(React.findDOMNode(this.refs.code), {
+            lineNumbers: true,
+            lineWrapping: true,
+            indentUnit: 4,
+            fixedGutter: false,
+            mode: "javascript",
+            inputStyle: "contenteditable",
+            autofocus: true,
+            theme: 'material'
+        })
+        this.editor.on('change', () => channels.codeEdited.send( this.editor.getValue() ))
+        channels.codeEdited.send( this.editor.getValue() )
     }
     render(){
-        return (<code contentEditable='true' ref="t" onKeyUp={this._onKey} onKeyDown={this._handleFormatting} dangerouslySetInnerHTML={{__html: highlight(program, 'javascript') }}></code>)
+        return (<div><textarea ref='code'>{program}</textarea></div>)
     }
 }
 
