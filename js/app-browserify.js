@@ -6,15 +6,79 @@ import React, {Component} from 'react'
 let codemirror = require('./codemirror')
 let jsmode = require('./javascript')
 
-var program = unescape(window.location.hash.slice(1)) || `/* (1) use log(..) to print output (both sync and async) to the right hand side.
+const directions = `/* (1) use log(..) to print output (both sync and async) to the right hand side.
  * (2) use reset(..) from your own code to reset the output area.
- * (3) Warning: infinite loops will possibly freeze this tab, so take caution. */
+ * (3) CMD+S to share a link to your code. */`
+var program =
+    unescape(window.location.hash.slice(1)) ||
+    `${directions}
 
 log(5000)
 let each = (c, fn) => c.forEach(fn)
 each([{a:1},2,3], log)
 `
 
+function prepEnvironment() {
+    // Disable selecting of text
+    document.onselectstart = function() {
+        if (event.srcElement.type != "text" && event.srcElement.type != "textarea" && event.srcElement.type != "password") {
+            return false
+        } else {
+            return true
+        }
+    }
+
+    // Break out of frames
+
+    function bust() {
+        document.write = "";
+        window.top.location = window.self.location;
+        setTimeout(function() {
+            document.body.innerHTML = ''
+        }, 0)
+        window.self.onload = function(evt) {
+            document.body.innerHTML = ''
+        }
+    }
+
+    if (window.top !== window.self) {
+        try {
+            if (window.top.location.host) {} else {
+                bust()
+            }
+        } catch (ex) {
+            bust()
+        }
+    }
+
+    // Disable Context Menu
+    document.oncontextmenu = function() {
+        return false
+    }
+
+    // Disable dragging of HTML elements
+    document.ondragstart = function() {
+        return false
+    }
+}
+
+const key = 'AIzaSyC70EBqy70L7fzc19pm_CBczzBxOK-JnhU'
+const urlShortener = () => {
+    googleShortener(window.location.toString())
+}
+const googleShortener = (longUrl) =>
+    fetch(`https://www.googleapis.com/urlshortener/v1/url?key=${key}`,
+        {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({longUrl})
+        }
+    ).then((r) => r.json()).then((data) => {
+        window.prompt("Copy URL to clipboard:", data.id)
+    })
 const qs = (sel, el) => (el || document).querySelector(sel)
 
 /**
@@ -93,7 +157,7 @@ const chan = () => {
         g1 = gen((args) => { for(var x of dests) x(...args) }),
         stack = [],
         pipe = (...args) => {
-            requestAnimationFrame(() => {g1.next(args)})
+            setTimeout(() => {g1.next(args)}, 0)
         }
 
     g1.next()
@@ -206,7 +270,27 @@ const longest_common_substring_from_start = (a, b) => {
 class Code extends Component {
     constructor(...p){
         super(...p)
-        // channels.codeEdited.send( React.findDOMNode(this).innerText )
+        this.bind('_keyDown', '_keyUp')
+        this.keys = {}
+    }
+    _keyDown(e){
+        let {keyCode} = e
+        this.keys[keyCode] = true
+
+        if(this.keys[91] && this.keys[83]){
+            e.preventDefault()
+            urlShortener()
+        }
+    }
+    _keyUp(e){
+        let {keyCode} = e
+        this.keys[keyCode] = false
+        setTimeout(() => {
+            this.keys = {}
+        }, 50)
+    }
+    shouldComponentUpdate(){
+        return false
     }
     componentDidMount(){
         this.editor = codemirror.fromTextArea(React.findDOMNode(this.refs.code), {
@@ -223,7 +307,7 @@ class Code extends Component {
         channels.codeEdited.send( this.editor.getValue() )
     }
     render(){
-        return (<div><textarea ref='code'>{program}</textarea></div>)
+        return (<div onKeyDown={this._keyDown} onKeyUp={this._keyUp}><textarea ref='code'>{program}</textarea></div>)
     }
 }
 
@@ -253,5 +337,6 @@ class Results extends Component {
 }
 
 window.onload = function(){
+    prepEnvironment()
     React.render(<TwoPainz />, qs('.container'))
 }
