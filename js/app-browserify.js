@@ -335,7 +335,7 @@ class Results extends Component {
     }
     render(){
         let logs = map(this.state.logs, (a) => JSON.stringify(a)).join('\n'),
-            error = this.state.error && (this.state.error.message || `${this.state.error.toString()}\n---------\n${this.state.error.codeFrame}`)
+            error = this.state.error && `${this.state.error}\n---------\n${this.state.error.codeFrame || this.state.error.message}`
 
         return (<div className="right-pane">
             <textarea readOnly={true} value={ logs } />
