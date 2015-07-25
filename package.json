@@ -7,7 +7,7 @@
     "build:js-min": "browserify -e ./js/app-browserify.js -t [babelify --stage 1] | uglifyjs -m -c unused=false > ./dist/app-browserify.js & browserify -e ./js/worker.js -t [babelify --stage 1] | uglifyjs -m -c unused=false > ./dist/worker.js",
     "build": "npm run build:js-min & npm run build:css",
     "watch:css": "chokidar-cmd -c 'npm run build:css' -t ./scss/",
-    "watch:js": "watchify ./js/app-browserify.js -t [ babelify --stage 1 ] -o ./dist/app-browserify.js -d & watchify ./js/worker.js -t [ babelify --stage 1 ] -o ./dist/worker.js;",
+    "watch:js": "watchify ./js/app-browserify.js -t [ babelify --stage 1 ] -o ./dist/app-browserify.js & watchify ./js/worker.js -t [ babelify --stage 1 ] -o ./dist/worker.js;",
     "watch": "npm run watch:css & npm run watch:js;",
     "test": "mocha ./js/test/; echo '----- tests done'",
     "server": "nodemon --watch . --ext js,jsx heroku-server.js & npm run watch",

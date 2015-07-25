@@ -179,7 +179,8 @@ const chan = () => {
 const channels = {
     codeEdited: chan(),
     logEmitted: chan(),
-    codeCleared: chan()
+    codeCleared: chan(),
+    errorOccurred: chan()
 }
 
 /**
@@ -212,9 +213,14 @@ const getWorker = (code) => {
 
         }
 
+        worker_new.onerror = (e) => {
+            channels.errorOccurred.send(e)
+        }
+
         requestAnimationFrame(() => {
             if(!worker_old) return
             worker.onmessage = null
+            worker.onerror = null
             worker_old.terminate()
         })
     })
@@ -233,12 +239,13 @@ const analyze = (program) => {
         const result = Babel.transform(program, {stage: 1}),
             {code} = result
         worker.new(code)
+        channels.errorOccurred.send()
+        channels.codeCleared.send()
     } catch(e){
-        console.error(e)
+        channels.errorOccurred.send(e)
     }
     oldProgram = program.trim()
     window.location.hash = `#${escape(oldProgram)}`
-    channels.codeCleared.send()
 }
 
 function autobind(target){
@@ -255,15 +262,6 @@ class TwoPainz extends Component {
             <Results />
         </div>)
     }
-}
-
-const longest_common_substring_from_start = (a, b) => {
-    let shorter = a.length > b.length ? a : b,
-        longer = a.length <= b.length ? a : b
-    for(let i=0, len = shorter.length; i<len; i++){
-        if(shorter[i] !== longer[i]) return shorter.slice(0, i+1)
-    }
-    return shorter
 }
 
 @autobind
@@ -321,18 +319,28 @@ class Results extends Component {
         this.rerender = () => {
             this.setState({ logs: [] })
         }
+        this.setError = (error) => {
+            this.setState({ error: error || '' })
+        }
     }
     componentDidMount(){
         channels.codeCleared.to(this.rerender)
         channels.logEmitted.to(this.append)
+        channels.errorOccurred.to(this.setError)
     }
     componentDidUnmount(){
-        channel.codeCleared.unto(this.rerender)
+        channels.codeCleared.unto(this.rerender)
         channels.logEmitted.unto(this.append)
+        channels.errorOccurred.unto(this.setError)
     }
     render(){
-        let logs = map(this.state.logs, (a) => JSON.stringify(a)).join('\n')
-        return (<textarea value={ logs } />)
+        let logs = map(this.state.logs, (a) => JSON.stringify(a)).join('\n'),
+            error = this.state.error && (this.state.error.message || `${this.state.error.toString()}\n---------\n${this.state.error.codeFrame}`)
+
+        return (<div className="right-pane">
+            <textarea readOnly={true} value={ logs } />
+            <textarea readOnly={true} className={`errors ${error ? 'active' : ''}`} value={error} />
+        </div>)
     }
 }
 

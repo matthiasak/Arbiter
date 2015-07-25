@@ -29,6 +29,9 @@
 *:before,
 *:after {
     box-sizing: border-box;
+    transition-duration: .25s;
+    transition-timing-function: ease;
+    transition-property: opacity, transform, background-color;
 }
 
 /**
@@ -77,37 +80,6 @@
 @mixin grid_r 4, 400 {}
 @mixin grid_r 4, 800 {}
 
-/**
- * PACE (automatic pre-loader thingy)
- */
-
-.pace {
-    pointer-events: none;
-    user-select: none;
-    transition: all 1s ease;
-    .pace-progress {
-        background: #2299dd;
-        position: fixed;
-        z-index: 2000;
-        top: 0;
-        right: 100%;
-        width: 100%;
-        height: 2px;
-        transition: all 1s ease;
-    }
-}
-
-.pace-inactive {
-    opacity: 0;
-}
-
-.pace-active {
-    opacity: 1;
-}
-/**
- * GENERAL
- */
-
 img {
     max-width: 100%;
 }
@@ -117,6 +89,12 @@ img {
 
 $gray: rgb(28, 38, 43);
 $green: rgb(109, 194, 173);
+$red: rgba(96, 16, 16, 1);
+$lightred: rgba(192, 96, 96, 1);
+
+body {
+    background-color: $gray;
+}
 
 .grid {
     height: 100vh;
@@ -130,14 +108,44 @@ $green: rgb(109, 194, 173);
             background-color: #efefef;
         }
         &:nth-child(2){
-            background-color: $gray;
-            color:$green;
-            padding: 0 1.5rem;
+            > * {
+                padding: 0 1.5rem;
+                border: 0;
+                outline: 0;
+                resize: none;
+            }
+
+            > *:nth-child(1) {
+                background-color: $gray;
+                color:$green;
+            }
+
+            > *:nth-child(2) {
+                background-color: $red;
+                color: $lightred;
+                flex: 1;
+                max-height: 0px;
+                opacity: 0;
+                &.active {
+                    max-height: 50%;
+                    opacity: 1;
+                }
+            }
+
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: stretch;
+            flex-wrap: wrap;
+
+            > * {
+                flex: 1;
+                flex-basis: 50%;
+            }
         }
         &:focus {
             highlight: none;
             outline: 1px solid lightblue;
-
         }
     }
 
