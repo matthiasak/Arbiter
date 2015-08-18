@@ -1,5 +1,3 @@
-require('babel/register')
-
 var express = require('express'),
     http = require('http'),
     path = require('path'),
@@ -10,6 +8,12 @@ var express = require('express'),
     override = require('method-override')
 
 function startServer() {
+
+    app.all('/', function(req, res, next) {
+        res.header("Access-Control-Allow-Origin", "*")
+        res.header("Access-Control-Allow-Headers", "X-Requested-With")
+        next()
+    })
 
     function querify(queryParamsObject){
         return '?'+Object.keys(queryParamsObject).map(function(val, key){ return val+'='+queryParamsObject[val] }).join('&')
