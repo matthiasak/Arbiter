@@ -6,9 +6,23 @@ import React, {Component} from 'react'
 let codemirror = require('./codemirror')
 let jsmode = require('./javascript')
 
-const directions = `/* (1) use log(..) to print output (both sync and async) to the right hand side.
- * (2) use reset(..) from your own code to reset the output area.
- * (3) CMD+S to share a link to your code. */`
+const directions = `/* (1) use log(..) to print your output to the right hand side.
+ * (2) use reset(..) clear the right hand side.
+ * (3) CMD+S to share a link to your code.
+ *
+ * Other things to note: this tool compiles es7/6 (es2015/2016) into es5, sends it
+ * to a webworker, and polyfills any missing functionality. Thus, for built-in AJAX,
+ * you can use fetch(), and for built-in Promises you can use the es6 Promise()
+ * spec.
+ *
+ * What else works with Arbiter? ... Everything! Arbiter uses babel-core to transpile
+ * JavaScript right here, in your browser, with a "WebWorker". You can see the latest and
+ * greatest Babel features at https://babeljs.io/docs/learn-es2015/.
+ *
+ * Built with love by @matthiasak
+ * - http://mkeas.org
+ * - http://github.com/matthiasak
+ * */`
 var program =
     unescape(window.location.hash.slice(1)) ||
     `${directions}
@@ -19,15 +33,6 @@ each([{a:1},2,3], log)
 `
 
 function prepEnvironment() {
-    // Disable selecting of text
-    document.onselectstart = function() {
-        if (event.srcElement.type != "text" && event.srcElement.type != "textarea" && event.srcElement.type != "password") {
-            return false
-        } else {
-            return true
-        }
-    }
-
     // Break out of frames
 
     function bust() {
@@ -41,15 +46,15 @@ function prepEnvironment() {
         }
     }
 
-    if (window.top !== window.self) {
-        try {
-            if (window.top.location.host) {} else {
-                bust()
-            }
-        } catch (ex) {
-            bust()
-        }
-    }
+    // if (window.top !== window.self) {
+    //     try {
+    //         if (window.top.location.host) {} else {
+    //             bust()
+    //         }
+    //     } catch (ex) {
+    //         bust()
+    //     }
+    // }
 
     // Disable Context Menu
     document.oncontextmenu = function() {
