@@ -1,6 +1,4 @@
-require("es5-shim")
 require("babel/polyfill")
-import {Promise} from 'es6-promise'
 var Babel = require('babel-core')
 import React, {Component} from 'react'
 let codemirror = require('./codemirror')
@@ -35,16 +33,16 @@ each([{a:1},2,3], log)
 function prepEnvironment() {
     // Break out of frames
 
-    function bust() {
-        document.write = "";
-        window.top.location = window.self.location;
-        setTimeout(function() {
-            document.body.innerHTML = ''
-        }, 0)
-        window.self.onload = function(evt) {
-            document.body.innerHTML = ''
-        }
-    }
+    // function bust() {
+    //     document.write = "";
+    //     window.top.location = window.self.location;
+    //     setTimeout(function() {
+    //         document.body.innerHTML = ''
+    //     }, 0)
+    //     window.self.onload = function(evt) {
+    //         document.body.innerHTML = ''
+    //     }
+    // }
 
     // if (window.top !== window.self) {
     //     try {
