@@ -3,6 +3,7 @@ var Babel = require('babel-core')
 import React, {Component} from 'react'
 let codemirror = require('./codemirror')
 let jsmode = require('./javascript')
+let sublime = require('./sublime-keymap')
 
 const directions = `/* (1) use log(..) to print your output to the right hand side.
  * (2) use reset(..) clear the right hand side.
@@ -300,8 +301,9 @@ class Code extends Component {
             indentUnit: 4,
             fixedGutter: false,
             mode: "javascript",
+            keyMap: "sublime",
             inputStyle: "contenteditable",
-            autofocus: true,
+            autofocus: false,
             theme: 'material'
         })
         this.editor.on('change', () => channels.codeEdited.send( this.editor.getValue() ))
