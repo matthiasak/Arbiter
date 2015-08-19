@@ -46,5 +46,8 @@
     "request": "^2.55.0",
     "underscore": "^1.8.3",
     "whatwg-fetch": "^0.8.2"
+  },
+  "devDependencies": {
+    "codemirror": "^5.5.0"
   }
 }

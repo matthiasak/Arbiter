@@ -1,9 +1,14 @@
 require("babel/polyfill")
 var Babel = require('babel-core')
 import React, {Component} from 'react'
-let codemirror = require('./codemirror')
-let jsmode = require('./javascript')
-let sublime = require('./sublime-keymap')
+let codemirror = require('codemirror')
+let jsmode = require('codemirror/mode/javascript/javascript')
+let comment = require('codemirror/addon/comment/comment')
+// require('codemirror/addon/fold/foldcode')
+// require('codemirror/addon/fold/foldgutter')
+// require('codemirror/addon/fold/brace-fold')
+// require('codemirror/addon/fold/comment-fold')
+let sublime = require('codemirror/keymap/sublime')
 
 const directions = `/* (1) use log(..) to print your output to the right hand side.
  * (2) use reset(..) clear the right hand side.
@@ -272,24 +277,6 @@ class TwoPainz extends Component {
 class Code extends Component {
     constructor(...p){
         super(...p)
-        this.bind('_keyDown', '_keyUp')
-        this.keys = {}
-    }
-    _keyDown(e){
-        let {keyCode} = e
-        this.keys[keyCode] = true
-
-        if(this.keys[91] && this.keys[83]){
-            e.preventDefault()
-            urlShortener()
-        }
-    }
-    _keyUp(e){
-        let {keyCode} = e
-        this.keys[keyCode] = false
-        setTimeout(() => {
-            this.keys = {}
-        }, 50)
     }
     shouldComponentUpdate(){
         return false
@@ -302,6 +289,11 @@ class Code extends Component {
             fixedGutter: false,
             mode: "javascript",
             keyMap: "sublime",
+            extraKeys: {
+                "Cmd-S": urlShortener,
+                "Ctrl-S": urlShortener
+            },
+            // foldGutter: true,
             inputStyle: "contenteditable",
             autofocus: false,
             theme: 'material'
@@ -310,7 +302,7 @@ class Code extends Component {
         channels.codeEdited.send( this.editor.getValue() )
     }
     render(){
-        return (<div onKeyDown={this._keyDown} onKeyUp={this._keyUp}><textarea ref='code'>{program}</textarea></div>)
+        return (<div><textarea ref='code'>{program}</textarea></div>)
     }
 }
 

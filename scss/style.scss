@@ -1,7 +1,8 @@
 
 @import "../bower_components/normalize-css/normalize.css";
 @import "../bower_components/typeplate-starter-kit/css/typeplate.css";
-@import "./codemirror.css";
+@import "../node_modules/codemirror/lib/codemirror.css";
+@import "../node_modules/codemirror/addon/fold/foldgutter.css";
 
 
 /* latin-ext */
