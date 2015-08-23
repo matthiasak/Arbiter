@@ -4,7 +4,7 @@
   },
   "scripts": {
     "build:css": "postcss --use postcss-import --use postcss-mixins --use postcss-simple-vars --use postcss-calc --use postcss-nested --use postcss-conditionals --use postcss-for --use postcss-each --use postcss-simple-extend --use autoprefixer --use csswring -o ./dist/style.css scss/style.scss;",
-    "build:js-min": "browserify -e ./js/app-browserify.js -t [babelify --stage 1] | uglifyjs -m -c unused=false > ./dist/app-browserify.js & browserify -e ./js/worker.js -t [babelify --stage 1] | uglifyjs -m -c unused=false > ./dist/worker.js",
+    "build:js-min": "browserify -e ./js/app-browserify.js -t [babelify --stage 1] | uglifyjs -m -c > ./dist/app-browserify.js & browserify -e ./js/worker.js -t [babelify --stage 1] | uglifyjs -m -c > ./dist/worker.js",
     "build": "npm run build:js-min & npm run build:css",
     "watch:css": "chokidar-cmd -c 'npm run build:css' -t ./scss/",
     "watch:js": "watchify ./js/app-browserify.js -t [ babelify --stage 1 ] -o ./dist/app-browserify.js -d & watchify ./js/worker.js -t [ babelify --stage 1 ] -o ./dist/worker.js -d;",

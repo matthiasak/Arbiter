@@ -154,33 +154,16 @@ const prop = (val, onSet) => {
     }
 }
 
-const gen = function* ( cb = ()=>{} ){
-    var x
-    while(1) {
-        x = cb(yield x)
-    }
-}
-
 const chan = () => {
-    let dests = new Set(),
-        g1 = gen((args) => { for(var x of dests) x(...args) }),
-        stack = [],
+    const dests = new Set(),
         pipe = (...args) => {
-            setTimeout(() => {g1.next(args)}, 0)
+            for(var x of dests) x(...args)
         }
 
-    g1.next()
-
     return {
-        from: function(cb) {
-            cb(pipe)
-        },
-        to: function(cb) {
-            dests.add(cb)
-        },
-        unto: function(cb){
-            dests.remove(cb)
-        },
+        from: cb => cb(pipe),
+        to: cb => dests.add(cb),
+        unto: cb => dests.remove(cb),
         send: (...args) => pipe(...args)
     }
 }
